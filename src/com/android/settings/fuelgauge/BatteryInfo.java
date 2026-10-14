@@ -37,6 +37,7 @@ import com.android.settings.Utils;
 import com.android.settings.overlay.FeatureFactory;
 import com.android.settings.widget.UsageView;
 import com.android.settingslib.R;
+import com.android.settingslib.fuelgauge.BatteryStatus;
 import com.android.settingslib.fuelgauge.Estimate;
 import com.android.settingslib.fuelgauge.EstimateKt;
 import com.android.settingslib.utils.PowerUtil;
@@ -301,7 +302,18 @@ public class BatteryInfo {
             int resId = R.string.power_charging_duration;
             info.remainingLabel = context.getString(R.string.power_remaining_charging_duration_only,
                     timeString);
-            info.chargeLabel = context.getString(resId, info.batteryPercentString, timeString);
+            final BatteryStatus batteryStatus = new BatteryStatus(batteryBroadcast);
+            if (!compactStatus && status == BatteryManager.BATTERY_STATUS_CHARGING
+                    && batteryStatus.isPluggedInWired()
+                    && batteryStatus.getChargingSpeed(context) == BatteryStatus.CHARGING_FAST) {
+                final String chargingLabel = resources.getString(R.string.power_charging,
+                        info.batteryPercentString, info.statusLabel.toLowerCase());
+                info.chargeLabel = context.getString(
+                        com.android.settings.R.string.battery_state_and_duration,
+                        chargingLabel, info.remainingLabel);
+            } else {
+                info.chargeLabel = context.getString(resId, info.batteryPercentString, timeString);
+            }
         } else if (dockDefenderMode == BatteryUtils.DockDefenderMode.FUTURE_BYPASS) {
             // Dock defender will be triggered in the future, charging will be optimized.
             info.chargeLabel = context.getString(R.string.power_charging_future_paused,

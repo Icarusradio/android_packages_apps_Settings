@@ -256,6 +256,59 @@ public class BatteryInfoTest {
     }
 
     @Test
+    public void testGetBatteryInfo_fastChargingWithRemainingTime_showsSpeedAndTime() {
+        mChargingBatteryBroadcast
+                .putExtra(BatteryManager.EXTRA_MAX_CHARGING_CURRENT, 2000000)
+                .putExtra(BatteryManager.EXTRA_MAX_CHARGING_VOLTAGE, 9000000);
+        doReturn(TEST_CHARGE_TIME_REMAINING / 1000)
+                .when(mBatteryUsageStats).getChargeTimeRemainingMs();
+
+        BatteryInfo info = BatteryInfo.getBatteryInfo(mContext, mChargingBatteryBroadcast,
+                mBatteryUsageStats, MOCK_ESTIMATE, SystemClock.elapsedRealtime() * 1000,
+                true /* shortString */);
+
+        assertThat(info.chargeLabel.toString()).contains(info.batteryPercentString);
+        assertThat(info.chargeLabel.toString()).contains(
+                mContext.getString(R.string.battery_info_status_charging_fast).toLowerCase());
+        assertThat(info.chargeLabel.toString()).contains(TEST_CHARGE_TIME_REMAINING_STRINGIFIED);
+        assertThat(info.remainingTimeUs).isEqualTo(TEST_CHARGE_TIME_REMAINING);
+    }
+
+    @Test
+    public void testGetBatteryInfo_fastChargingWithoutRemainingTime_showsSpeed() {
+        mChargingBatteryBroadcast
+                .putExtra(BatteryManager.EXTRA_MAX_CHARGING_CURRENT, 2000000)
+                .putExtra(BatteryManager.EXTRA_MAX_CHARGING_VOLTAGE, 9000000);
+        doReturn(REMAINING_TIME_NULL).when(mBatteryUsageStats).getChargeTimeRemainingMs();
+
+        BatteryInfo info = BatteryInfo.getBatteryInfo(mContext, mChargingBatteryBroadcast,
+                mBatteryUsageStats, MOCK_ESTIMATE, SystemClock.elapsedRealtime() * 1000,
+                true /* shortString */);
+
+        assertThat(info.chargeLabel.toString()).contains(
+                mContext.getString(R.string.battery_info_status_charging_fast).toLowerCase());
+        assertThat(info.remainingLabel).isNull();
+    }
+
+    @Test
+    public void testGetBatteryInfo_fastChargingWithOverheat_showsChargingLimited() {
+        mChargingBatteryBroadcast
+                .putExtra(BatteryManager.EXTRA_MAX_CHARGING_CURRENT, 2000000)
+                .putExtra(BatteryManager.EXTRA_MAX_CHARGING_VOLTAGE, 9000000)
+                .putExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_OVERHEAT);
+        doReturn(TEST_CHARGE_TIME_REMAINING / 1000)
+                .when(mBatteryUsageStats).getChargeTimeRemainingMs();
+
+        BatteryInfo info = BatteryInfo.getBatteryInfo(mContext, mChargingBatteryBroadcast,
+                mBatteryUsageStats, MOCK_ESTIMATE, SystemClock.elapsedRealtime() * 1000,
+                true /* shortString */);
+
+        assertThat(info.chargeLabel.toString()).contains(STATUS_CHARGING_PAUSED);
+        assertThat(info.chargeLabel.toString()).doesNotContain(
+                mContext.getString(R.string.battery_info_status_charging_fast).toLowerCase());
+    }
+
+    @Test
     public void testGetBatteryInfo_chargingWithOverheated_updateChargeLabel() {
         doReturn(TEST_CHARGE_TIME_REMAINING)
                 .when(mBatteryUsageStats)
